@@ -1,0 +1,18 @@
+{
+  "name": "jquery-ui-built-themes",
+  "version": "1.12.1",
+  "description": "Prebuilt official themes for jQuery UI",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ngagne/codeorigin.jquery.com.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ngagne/codeorigin.jquery.com/issues"
+  },
+  "homepage": "https://github.com/ngagne/codeorigin.jquery.com#readme"
+}

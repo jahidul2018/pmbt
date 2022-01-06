@@ -1,0 +1,148 @@
+<script type="text/javascript">
+
+    $(function () {
+
+        $("#quote_date").datetimepicker({format: '{{ config('bt.dateFormat') }}', timepicker: false, scrollInput: false});
+        $("#expires_at").datetimepicker({format: '{{ config('bt.dateFormat') }}', timepicker: false, scrollInput: false});
+
+        $('#btn-add-product').click(function() {
+            $('#modal-placeholder').load('{{ route( 'products.ajax.getProduct', 0) }}');// vendorid 0 for all except purchase order
+        });
+
+        $('#btn-add-employee').click(function() {
+            $('#modal-placeholder').load('{{ route( 'employees.ajax.getEmployee') }}');
+        });
+
+        $('#btn-add-lookup').click(function() {
+            $('#modal-placeholder').load('{{ route( 'itemLookups.ajax.getItemLookup') }}');
+        });
+
+        $('textarea').autosize();
+
+        $('#btn-copy-quote').click(function () {
+            $('#modal-placeholder').load('{{ route('quoteCopy.create') }}', {
+                quote_id: {{ $quote->id }}
+            });
+        });
+
+        $('#btn-quote-to-invoice').click(function () {
+            $('#modal-placeholder').load('{{ route('quoteToInvoice.create') }}', {
+                quote_id: {{ $quote->id }},
+                client_id: {{ $quote->client_id }}
+            });
+        });
+
+        $('#btn-quote-to-workorder').click(function () {
+            $('#modal-placeholder').load('{{ route('quoteToWorkorder.create') }}', {
+                quote_id: {{ $quote->id }},
+                client_id: {{ $quote->client_id }}
+            });
+        });
+
+        $('#btn-update-exchange-rate').click(function () {
+            updateExchangeRate();
+        });
+
+        $('#currency_code').change(function () {
+            updateExchangeRate();
+        });
+
+        function updateExchangeRate() {
+            $.post('{{ route('currencies.getExchangeRate') }}', {
+                currency_code: $('#currency_code').val()
+            }, function (data) {
+                $('#exchange_rate').val(data);
+            });
+        }
+
+        $('.btn-delete-quote-item').click(function () {
+            const id = $(this).data('item-id');
+            deleteConfirm('@lang('bt.trash_record_warning')', '{{ route('quoteItem.delete') }}', id,
+                '{{ route('quotes.quoteEdit.refreshTotals') }}', '{{ $quote->id }}' );
+        });
+
+        $('.btn-save-quote').click(function () {
+            const items = [];
+            let display_order = 1;
+            const custom_fields = {};
+            const apply_exchange_rate = $(this).data('apply-exchange-rate');
+
+            $('table tr.item').each(function () {
+                const row = {};
+                $(this).find('input,select,textarea').each(function () {
+                    if ($(this).attr('name') !== undefined) {
+                        if ($(this).is(':checkbox')) {
+                            if ($(this).is(':checked')) {
+                                row[$(this).attr('name')] = 1;
+                            }
+                            else {
+                                row[$(this).attr('name')] = 0;
+                            }
+                        }
+                        else {
+                            row[$(this).attr('name')] = $(this).val();
+                        }
+                    }
+                });
+                row['display_order'] = display_order;
+                display_order++;
+                items.push(row);
+            });
+
+            $('.custom-form-field').each(function () {
+                const fieldName = $(this).data('quotes-field-name');
+                if (fieldName !== undefined) {
+                    custom_fields[$(this).data('quotes-field-name')] = $(this).val();
+                }
+            });
+
+           swalSaving();
+
+            $.post('{{ route('quotes.update', [$quote->id]) }}', {
+                number: $('#number').val(),
+                quote_date: $('#quote_date').val(),
+                expires_at: $('#expires_at').val(),
+                quote_status_id: $('#quote_status_id').val(),
+                items: items,
+                terms: $('#terms').val(),
+                footer: $('#footer').val(),
+                currency_code: $('#currency_code').val(),
+                exchange_rate: $('#exchange_rate').val(),
+                custom: custom_fields,
+                apply_exchange_rate: apply_exchange_rate,
+                template: $('#template').val(),
+                summary: $('#summary').val(),
+                discount: $('#discount').val()
+            }).done(function () {
+                $('#div-quote-edit').load('{{ route('quotes.quoteEdit.refreshEdit', [$quote->id]) }}', function () {
+                    notify('@lang('bt.record_successfully_updated')', 'success');
+                });
+            }).fail(function (response) {
+                if (response.status == 422) {
+                    let msg = '';
+                    $.each($.parseJSON(response.responseText).errors, function (id, message) {
+                        msg += message + '\n';
+                    });
+                    notify(msg, 'error');
+                } else {
+                    notify('@lang('bt.unknown_error')', 'error');
+                }
+            });
+        });
+
+        const fixHelper = function (e, tr) {
+            const $originals = tr.children();
+            const $helper = tr.clone();
+            $helper.children().each(function (index) {
+                $(this).width($originals.eq(index).width())
+            });
+            return $helper;
+        };
+
+        $("#item-table tbody").sortable({
+            helper: fixHelper
+        });
+
+    });
+
+</script>
